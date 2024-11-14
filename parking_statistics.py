@@ -1,12 +1,8 @@
-import pandas as pd
 import os
 import re
-from itertools import product
 import datetime
-
-
-def in_time(t_start, t_end, t):
-    return t_start <= t and t <= t_end
+import pandas as pd
+from itertools import product
 
 def list_mean(L):
     if len(L) == 0:
@@ -30,8 +26,8 @@ def load_data(file_path):
     # 組合 '進入日' 和 '進入時間'、'出場日' 和 '出場時間' 為 datetime
 
     # time stamp
-    df['enter_ts'] = pd.to_datetime(df['進入日'].astype(str) + ' ' + df['進入時間'].astype(str), errors='coerce')
-    df['leave_ts'] = pd.to_datetime(df['出場日'].astype(str) + ' ' + df['出場時間'].astype(str), errors='coerce')
+    df['enter_ts'] = pd.to_datetime(df['進入日'].astype(str) + ' ' + df['進入時間'].astype(str), format="%Y-%m-%d %H:%M:%S", errors='coerce')
+    df['leave_ts'] = pd.to_datetime(df['出場日'].astype(str) + ' ' + df['出場時間'].astype(str), format="%Y-%m-%d %H:%M:%S", errors='coerce')
 
     df['停留時數'] = (df['leave_ts'] - df['enter_ts']).dt.total_seconds() / 3600
     df['停留時數'] = df['停留時數'].fillna(0)
@@ -63,7 +59,7 @@ def generate_average_max_vehicles(df, categories, start_date, end_date):
     # 更新此處，'H' 改為 'h'，避免 deprecated 警告
     time_bins = pd.date_range("00:00", "23:59", freq="h").time
     week_days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    columns = [cat + "_" + day for cat, day in product(categories, week_days)]
+    columns = [cat + "_" + day for day, cat in product(week_days, categories)]
     weekly_avg_max_vehicles = pd.DataFrame(index = time_bins, columns = columns)
 
     current_date = start_date
@@ -80,7 +76,8 @@ def generate_average_max_vehicles(df, categories, start_date, end_date):
                 vehicles_in_time_bin = df[(df['enter_ts'] <= end_time) & (df['leave_ts'] >= start_time) & (df['票種'] == cat)]
                 size_table[(current_date.weekday(), time_bin, cat)].append(len(vehicles_in_time_bin))
         current_date += datetime.timedelta(days = 1)
-    
+        # print(current_date)
+
     for i in range(len(week_days)):
         for time_bin in time_bins:
             for cat in categories:
@@ -90,7 +87,7 @@ def generate_max_vehicles_in_period(df, time_periods, categories, start_date, en
     # 更新此處，'H' 改為 'h'，避免 deprecated 警告
     time_periods_str = [start_time.strftime("%H:%M:%S") + "-" + end_time.strftime("%H:%M:%S") for (start_time, end_time) in time_periods]
     week_days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    columns = [cat + "_" + day for cat, day in product(categories, week_days)]
+    columns = [cat + "_" + day for day, cat in product(week_days, categories)]
     avg_max_vehicles_in_period = pd.DataFrame(index = time_periods_str, columns = columns)
 
     current_date = start_date
@@ -102,12 +99,12 @@ def generate_max_vehicles_in_period(df, time_periods, categories, start_date, en
     while current_date <= end_date:
         for j in range(len(time_periods)):
             for cat in categories:
-                start_time = current_date.replace(hour = time_periods[j][0].hour, minute = time_periods[j][0].minute, second = time_periods[j][0].second)
+                start_time = current_date.replace(hour = time_periods[j][0].hour, minute = time_periods[j][0].minute)
                 if time_periods[j][1].hour == 24:
-                    end_time = current_date.replace(hour = 0, minute = time_periods[j][0].minute, second = time_periods[j][0].second)
+                    end_time = current_date.replace(hour = 0, minute = time_periods[j][0].minute)
                     end_time += datetime.timedelta(days = 1)
                 else:
-                    end_time = current_date.replace(hour = time_periods[j][1].hour, minute = time_periods[j][1].minute, second = time_periods[j][0].second)
+                    end_time = current_date.replace(hour = time_periods[j][1].hour, minute = time_periods[j][1].minute)
                 vehicles_in_time_bin = df[(df['enter_ts'] <= end_time) & (df['leave_ts'] >= start_time) & (df['票種'] == cat)]
                 start_str = time_periods[j][0].strftime("%H:%M:%S")
                 end_str = time_periods[j][1].strftime("%H:%M:%S")
@@ -148,7 +145,7 @@ def generate_vehicle_in_out_by_hour(df, categories, start_date, end_date):
                         vehicles_in_time_bin = df[(df['leave_ts'] <= end_time) & (df['leave_ts'] >= start_time) & (df['票種'] == cat)]
                     size_table[(current_date.weekday(), typ, time_bin, cat)].append(len(vehicles_in_time_bin))
         current_date += datetime.timedelta(days = 1)
-    
+
     for i in range(len(week_days)):
         for typ in INOUT:
             for time_bin in time_bins:
@@ -180,51 +177,75 @@ def generate_longest_continuous_stay(df, categories):
     return longest_stays
 
 def save_to_excel(arena, df, tables):
-    # 只選擇需要的欄位
-    columns_to_include = ['車號', '票種', '子場站', '進站設備', 
-                          '進入時間', '出場時間', '停留時數', 'enter_ts', 'leave_ts']
-    df_filtered = df[columns_to_include]
-    
-    # 移除欄位名稱中的空白
-    df_filtered.columns = [col.strip() for col in df_filtered.columns]
+    # columns_to_include = ['車號', '票種', '子場站', '進站設備', '進入時間', '出場時間', '停留時數', 'enter_ts', 'leave_ts']
+    # df_filtered = df[columns_to_include]
+    # df_filtered.columns = [col.strip() for col in df_filtered.columns]
 
-    # 寫入 Excel
     with pd.ExcelWriter(arena + '校區統計結果.xlsx', engine='xlsxwriter') as writer:
         tables[0].to_excel(writer, sheet_name='Avg Max Vehicles')
         tables[1].to_excel(writer, sheet_name='Max Vehicles in Period')
         tables[2].to_excel(writer, sheet_name='Vehicle In_Out by Hour')
         tables[3].to_excel(writer, sheet_name='Longest Continuous Stay')
-        df_filtered.to_excel(writer, sheet_name='Parking Data', index=False)
+        # df_filtered.to_excel(writer, sheet_name='Parking Data', index=False)
+
+
+def is_valid_datetime(input_str, date_format= "%Y-%m-%d %H:%M:%S"):
+    try:
+        datetime.datetime.strptime(input_str, date_format)
+        return True
+    except ValueError:
+        return False
 
 if __name__ == "__main__":
     start_date = input("請輸入欲查詢開始日期 (ex. 2024-10-1): ")
+    if not is_valid_datetime(start_date, "%Y-%m-%d"):
+        print("輸入起始日期的格式不對")
+        print("錯誤輸入: " + start_date)
+        exit(1)
     start_date = pd.to_datetime(start_date)
 
+
     end_date = input("請輸入欲查詢結束日期 (ex. 2024-10-30): ")
+    if not is_valid_datetime(end_date, "%Y-%m-%d"):
+        print("輸入結束日期的格式不對")
+        print("錯誤輸入: " + end_date)
+        exit(1)
+
     end_date = pd.to_datetime(end_date)
 
     folder_path = '停車統計資料夾'
-    time_periods_input = list(input("請輸入要查詢的時間點，可多個，請用空白隔開 (ex. 08:00-17:00 08:00-13:00): ").split(' '))
+    time_periods_input = list(input("請輸入要查詢的時間點，可多個，請用空白隔開\n若不須查詢特定時間，可以直接按enter跳過 (ex. 8:00-17:00 8:00-13:00): ").split(' '))
+    time_periods_input = [period.strip() for period in time_periods_input if period.strip()]
+
     time_periods = []
     for time_period_input in time_periods_input:
         start_oclock, end_oclock = time_period_input.split("-")
-        start_oclock += ":00"
-        end_oclock += ":00"
+        if not is_valid_datetime(start_oclock, "%H:%M"):
+            print("輸入起始時間點的格式不對")
+            print("錯誤輸入:" + start_oclock)
+            exit(1)
+
+        if not is_valid_datetime(end_oclock, "%H:%M"):
+            print("輸入結束時間點的格式不對")
+            print("錯誤輸入:" + end_oclock)
+            exit(1)
+            
         time_periods.append((start_oclock, end_oclock))
-    print(time_periods)
+
+    # print(time_periods)
     for i in range(len(time_periods)):
-        start_oclock = datetime.datetime.strptime(time_periods[i][0], "%H:%M:%S").time()
-        end_oclock = datetime.datetime.strptime(time_periods[i][1], "%H:%M:%S").time()
+        start_oclock = datetime.datetime.strptime(time_periods[i][0], "%H:%M").time()
+        end_oclock = datetime.datetime.strptime(time_periods[i][1], "%H:%M").time()
         time_periods[i] = [start_oclock, end_oclock]
 
+    
     for arena in ['光復', '博愛']:
+        print("開始統計" + arena + "校區停車資料")
         categories = []
 
-        # 定義正則表達式的模式，例如僅選擇以 "data_" 開頭、以 ".txt" 結尾的檔案
         pattern = re.compile(r".*" + arena + ".*\.xlsx$")
-        # 取得符合模式的檔案列表
         files_path = [f for f in os.listdir(folder_path) if pattern.match(f)]
-        print(files_path)
+        # print(files_path)
 
         df = pd.DataFrame()
         for file_path in files_path:
