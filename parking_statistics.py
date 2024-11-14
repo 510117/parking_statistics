@@ -1,9 +1,9 @@
+from itertools import product
+from tqdm import tqdm
+import pandas as pd
 import os
 import re
 import datetime
-import pandas as pd
-from tqdm import tqdm
-from itertools import product
 
 def list_mean(L):
     if len(L) == 0:
@@ -82,6 +82,8 @@ def generate_average_max_vehicles(df, categories, start_date, end_date):
         for time_bin in time_bins:
             for cat in categories:
                 weekly_avg_max_vehicles.loc[time_bin, (cat + "_" + week_days[i])] = list_mean(size_table[(i, time_bin, cat)])
+
+    weekly_avg_max_vehicles.columns = [col[:-4] if isinstance(col, str) else col for col in weekly_avg_max_vehicles.columns]
     return weekly_avg_max_vehicles
 def generate_max_vehicles_in_period(df, time_periods, categories, start_date, end_date):
     print("開始分析某時段內同時停留在校園內的最高車輛數 (2/4)")
@@ -120,6 +122,8 @@ def generate_max_vehicles_in_period(df, time_periods, categories, start_date, en
                 start_str = time_periods[j][0].strftime("%H:%M:%S")
                 end_str = time_periods[j][1].strftime("%H:%M:%S")
                 avg_max_vehicles_in_period.loc[time_periods_str[j], (cat + "_" + week_days[i])] = list_mean(size_table[(i, time_periods_str[j], cat)])
+
+    avg_max_vehicles_in_period.columns = [col[:-4] if isinstance(col, str) else col for col in avg_max_vehicles_in_period.columns]
     return avg_max_vehicles_in_period
 
 def generate_vehicle_in_out_by_hour(df, categories, start_date, end_date):
@@ -139,7 +143,6 @@ def generate_vehicle_in_out_by_hour(df, categories, start_date, end_date):
                     size_table[(i, typ, time_bin, cat)] = []
     
     with tqdm(total = (end_date - start_date).days) as pbar:
-
         while current_date <= end_date:
             for time_bin in time_bins:
                 for cat in categories:
@@ -160,6 +163,7 @@ def generate_vehicle_in_out_by_hour(df, categories, start_date, end_date):
                 for cat in categories:
                     columns_str = cat + "_" + week_days[i] + "_" + typ
                     vehicle_in_out_by_hour.loc[time_bin, columns_str] = list_mean(size_table[(i, typ, time_bin, cat)])
+    vehicle_in_out_by_hour.columns = [col[:-4] if isinstance(col, str) else col for col in vehicle_in_out_by_hour.columns]
     return vehicle_in_out_by_hour
 
 def generate_longest_continuous_stay(df, categories):
@@ -187,20 +191,35 @@ def generate_longest_continuous_stay(df, categories):
     
     return longest_stays
 
-def save_to_excel(arena, df, tables):
+def save_to_excel(arena, df, tables, categories):
     # columns_to_include = ['車號', '票種', '子場站', '進站設備', '進入時間', '出場時間', '停留時數', 'enter_ts', 'leave_ts']
     # df_filtered = df[columns_to_include]
     # df_filtered.columns = [col.strip() for col in df_filtered.columns]
 
     with pd.ExcelWriter(arena + '校區統計結果.xlsx', engine='xlsxwriter') as writer:
-        tables[0].to_excel(writer, sheet_name='Avg Max Vehicles')
-        tables[1].to_excel(writer, sheet_name='Max Vehicles in Period')
-        tables[2].to_excel(writer, sheet_name='Vehicle In_Out by Hour')
+        tables[0].to_excel(writer, sheet_name='Avg Max Vehicles', startrow=1)
+        tables[1].to_excel(writer, sheet_name='Max Vehicles in Period', startrow=1)
+        tables[2].to_excel(writer, sheet_name='Vehicle In_Out by Hour', startrow=1)
         tables[3].to_excel(writer, sheet_name='Longest Continuous Stay')
         # df_filtered.to_excel(writer, sheet_name='Parking Data', index=False)
+        workbook = writer.book
+        week_days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        merge_format = workbook.add_format({'align': 'center', 'valign': 'vcenter', 'bold': True})
+    
+        # 定義合併標題的函式
+        def merge_week_headers(worksheet):
+            worksheet.set_column('A:A', 10)
+            worksheet.set_column('B:ZZ', 15)
+            for i, day in enumerate(week_days):
+                start_col = i * len(categories)
+                end_col = start_col + len(categories) - 1
+                for col in range(start_col + 1, end_col + 2):
+                    worksheet.write(0, col, day, merge_format)
+        merge_week_headers(writer.sheets['Avg Max Vehicles'])
+        merge_week_headers(writer.sheets['Max Vehicles in Period'])
+        merge_week_headers(writer.sheets['Vehicle In_Out by Hour'])
 
-
-def is_valid_datetime(input_str, date_format= "%Y-%m-%d %H:%M:%S"):
+def is_valid_datetime(input_str, date_format = "%Y-%m-%d %H:%M:%S"):
     try:
         datetime.datetime.strptime(input_str, date_format)
         return True
@@ -208,7 +227,7 @@ def is_valid_datetime(input_str, date_format= "%Y-%m-%d %H:%M:%S"):
         return False
 
 if __name__ == "__main__":
-    start_date = input("請輸入欲查詢開始日期 (ex. 2024-10-1): ")
+    start_date = input("請輸入欲查詢開始日期 (ex. 2024-10-1): ").strip()
     if not is_valid_datetime(start_date, "%Y-%m-%d"):
         print("輸入起始日期的格式不對")
         print("錯誤輸入: " + start_date)
@@ -216,7 +235,7 @@ if __name__ == "__main__":
     start_date = pd.to_datetime(start_date)
 
 
-    end_date = input("請輸入欲查詢結束日期 (ex. 2024-10-30): ")
+    end_date = input("請輸入欲查詢結束日期 (ex. 2024-10-30): ").strip()
     if not is_valid_datetime(end_date, "%Y-%m-%d"):
         print("輸入結束日期的格式不對")
         print("錯誤輸入: " + end_date)
@@ -275,4 +294,4 @@ if __name__ == "__main__":
         
         tables = [avg_max_vehicles, max_vehicles_in_period, vehicle_in_out_by_hour, longest_continuous_stay]
         
-        save_to_excel(arena, df, tables)
+        save_to_excel(arena, df, tables, categories)
