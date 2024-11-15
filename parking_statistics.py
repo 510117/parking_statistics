@@ -265,44 +265,64 @@ def is_valid_datetime(input_str, date_format = "%Y-%m-%d %H:%M:%S"):
         return False
 
 if __name__ == "__main__":
-    start_date = input("請輸入欲查詢開始日期 (ex. 2024-10-1): ").strip()
-    if not is_valid_datetime(start_date, "%Y-%m-%d"):
-        print("輸入起始日期的格式不對")
-        print("錯誤輸入: " + start_date)
-        exit(1)
+
+    start_date = ""
+    while True:
+        start_date = input("請輸入欲查詢開始日期 (ex. 2024-10-1): ").strip()
+        if not is_valid_datetime(start_date, "%Y-%m-%d"):
+            print("輸入起始日期的格式不對")
+            print("錯誤輸入: " + start_date)
+            print("請再輸入一次")
+        else:
+            break
+
     start_date = pd.to_datetime(start_date)
 
+    end_date = ""
 
-    end_date = input("請輸入欲查詢結束日期 (ex. 2024-10-30): ").strip()
-    if not is_valid_datetime(end_date, "%Y-%m-%d"):
-        print("輸入結束日期的格式不對")
-        print("錯誤輸入: " + end_date)
-        exit(1)
-
+    while True:
+        end_date = input("請輸入欲查詢結束日期 (ex. 2024-10-30): ").strip()
+        if not is_valid_datetime(end_date, "%Y-%m-%d"):
+            print("輸入結束日期的格式不對")
+            print("錯誤輸入: " + end_date)
+            print("請再輸入一次")
+        else:
+            break
+            
     end_date = pd.to_datetime(end_date)
 
-    time_periods_input = list(input("請輸入要查詢的時間點，可多個，請用空白隔開\n若不須查詢特定時間，可以直接按enter跳過 (ex. 8:00-17:00 8:00-13:00): ").split(' '))
-    time_periods_input = [period.strip() for period in time_periods_input if period.strip()]
-
     time_periods = []
-    for time_period_input in time_periods_input:
-        try:
-            start_oclock, end_oclock = time_period_input.split("-")
-        except (ValueError):
-            print("輸入時間範圍的格式不對")
-            print("錯誤輸入: " + time_period_input)
-            exit(1)
-        if not is_valid_datetime(start_oclock, "%H:%M"):
-            print("輸入起始時間點的格式不對")
-            print("錯誤輸入: " + start_oclock)
-            exit(1)
+    while True:
+        ok = True
+        time_periods_input = list(input("請輸入要查詢的時間點，可多個，請用空白隔開\n若不須查詢特定時間，可以直接按enter跳過 (ex. 8:00-17:00 8:00-13:00): ").split(' '))
+        time_periods_input = [period.strip() for period in time_periods_input if period.strip()]
 
-        if not is_valid_datetime(end_oclock, "%H:%M"):
-            print("輸入結束時間點的格式不對")
-            print("錯誤輸入: " + end_oclock)
-            exit(1)
+        time_periods = []
+        for time_period_input in time_periods_input:
+            try:
+                start_oclock, end_oclock = time_period_input.split("-")
+            except (ValueError):
+                print("輸入時間範圍的格式不對")
+                print("錯誤輸入: " + time_period_input)
+                print("請再輸入一次")
+                ok = False
+                break
+            if not is_valid_datetime(start_oclock, "%H:%M"):
+                print("輸入起始時間點的格式不對")
+                print("錯誤輸入: " + start_oclock)
+                print("請再輸入一次")
+                ok = False
+
+            if not is_valid_datetime(end_oclock, "%H:%M"):
+                print("輸入結束時間點的格式不對")
+                print("錯誤輸入: " + end_oclock)
+                print("請再輸入一次")
+                ok = False
             
-        time_periods.append((start_oclock, end_oclock))
+            time_periods.append((start_oclock, end_oclock))
+        
+        if ok == True:
+            break
 
     # print(time_periods)
     for i in range(len(time_periods)):
