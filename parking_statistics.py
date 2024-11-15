@@ -227,11 +227,11 @@ def save_to_excel(arena, df, tables, categories, save_file_suffix):
     # df_filtered.columns = [col.strip() for col in df_filtered.columns]
 
     with pd.ExcelWriter(arena + "校區統計結果" + save_file_suffix + ".xlsx", engine='xlsxwriter') as writer:
-        tables[0].to_excel(writer, sheet_name='Avg Max Vehicles', startrow=1)
-        tables[1].to_excel(writer, sheet_name='Max Vehicles in Period', startrow=1)
-        tables[2].to_excel(writer, sheet_name='Vehicle In_Out by Hour', startrow=1)
-        tables[3].to_excel(writer, sheet_name='Longest Continuous Stay')
-        tables[4].to_excel(writer, sheet_name='Parking Data', index=False)
+        tables[0].to_excel(writer, sheet_name='每小時平均最高停留車次統計', startrow=1)
+        tables[1].to_excel(writer, sheet_name='查詢時段平均最高停留車次統計', startrow=1)
+        tables[2].to_excel(writer, sheet_name='每小時平均進出車流量統計', startrow=1)
+        tables[3].to_excel(writer, sheet_name='最高連續停留時長統計')
+        # tables[4].to_excel(writer, sheet_name='Parking Data', index=False)
         workbook = writer.book
         week_days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
         merge_format = workbook.add_format({'align': 'center', 'valign': 'vcenter', 'bold': True})
@@ -252,10 +252,10 @@ def save_to_excel(arena, df, tables, categories, save_file_suffix):
                     end_col = start_col + len(categories) * 2 - 1
                     for col in range(start_col + 1, end_col + 2):
                         worksheet.write(0, col, day, merge_format)
-        merge_week_headers(writer.sheets['Avg Max Vehicles'], 10, 1)
-        merge_week_headers(writer.sheets['Max Vehicles in Period'], 20, 1)
-        merge_week_headers(writer.sheets['Vehicle In_Out by Hour'], 10, 2)
-        merge_week_headers(writer.sheets['Vehicle In_Out by Hour'], 10, 0)
+        merge_week_headers(writer.sheets['每小時平均最高停留車次統計'], 10, 1)
+        merge_week_headers(writer.sheets['查詢時段平均最高停留車次統計'], 20, 1)
+        merge_week_headers(writer.sheets['每小時平均進出車流量統計'], 10, 2)
+        merge_week_headers(writer.sheets['最高連續停留時長統計'], 10, 0)
 
 def is_valid_datetime(input_str, date_format = "%Y-%m-%d %H:%M:%S"):
     try:
@@ -270,9 +270,8 @@ if __name__ == "__main__":
     while True:
         start_date = input("請輸入欲查詢開始日期 (ex. 2024-10-1): ").strip()
         if not is_valid_datetime(start_date, "%Y-%m-%d"):
-            print("輸入起始日期的格式不對")
-            print("錯誤輸入: " + start_date)
-            print("請再輸入一次")
+            print("格式錯誤，請再輸入一次。")
+            # print("錯誤輸入: " + start_date)
         else:
             break
 
@@ -283,9 +282,8 @@ if __name__ == "__main__":
     while True:
         end_date = input("請輸入欲查詢結束日期 (ex. 2024-10-30): ").strip()
         if not is_valid_datetime(end_date, "%Y-%m-%d"):
-            print("輸入結束日期的格式不對")
-            print("錯誤輸入: " + end_date)
-            print("請再輸入一次")
+            print("格式錯誤，請再輸入一次。")
+            # print("錯誤輸入: " + end_date)
         else:
             break
             
@@ -302,21 +300,18 @@ if __name__ == "__main__":
             try:
                 start_oclock, end_oclock = time_period_input.split("-")
             except (ValueError):
-                print("輸入時間範圍的格式不對")
-                print("錯誤輸入: " + time_period_input)
-                print("請再輸入一次")
+                print("格式錯誤，請再輸入一次。")
+                # print("錯誤輸入: " + time_period_input)
                 ok = False
                 break
             if not is_valid_datetime(start_oclock, "%H:%M"):
-                print("輸入起始時間點的格式不對")
-                print("錯誤輸入: " + start_oclock)
-                print("請再輸入一次")
+                print("格式錯誤，請再輸入一次。")
+                # print("錯誤輸入: " + start_oclock)
                 ok = False
 
             if not is_valid_datetime(end_oclock, "%H:%M"):
-                print("輸入結束時間點的格式不對")
-                print("錯誤輸入: " + end_oclock)
-                print("請再輸入一次")
+                print("格式錯誤，請再輸入一次。")
+                # print("錯誤輸入: " + end_oclock)
                 ok = False
             
             time_periods.append((start_oclock, end_oclock))
@@ -333,7 +328,7 @@ if __name__ == "__main__":
     print("開始分析")
     
     for arena in ['光復', '博愛']:
-        categories = ['學生長時汽車', '學生計次汽車', '教職員汽車', '教職員計次', '臨停車', '長時廠商汽車', '臨時貴賓', '退休及校友臨停', '退休及校友汽車識別證', '互惠車輛', '在職專班汽車', '身障優惠', '特殊入校車輛']
+        categories = ['學生長時汽車', '學生計次汽車', '教職員汽車', '教職員計次', '臨停車', '長時廠商汽車', '在職專班汽車', '臨時貴賓', '退休及校友臨停', '退休及校友汽車識別證', '互惠車輛', '身障優惠', '特殊入校車輛']
         folder_path = arena + '校區資料夾'
         pattern = re.compile(r".*" + arena + ".*\.xlsx$")
         files_path = [f for f in os.listdir(folder_path) if pattern.match(f)]
@@ -354,10 +349,3 @@ if __name__ == "__main__":
         
         save_file_suffix = start_date.strftime("%Y%m%d") + "-" + end_date.strftime("%Y%m%d")
         save_to_excel(arena, df, tables, categories, save_file_suffix)
-
-
-# 1. V 兩個餐廳
-# 2. V IN OUT 資料
-# 3. V cat寫死 排序
-# 4. V 檔名加查詢日期
-# 5. 執行檔
