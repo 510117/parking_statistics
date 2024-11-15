@@ -78,7 +78,7 @@ def get_max_vehicles_in_timeframe(df: pd.DataFrame, start_time: datetime, end_ti
     return max_count
 
 def generate_average_max_vehicles(df, categories, start_date, end_date):
-    print("開始分析每小時同時停留在校園內的平均最高車輛數 (1/4)")
+    print("開始分析每小時平均最高停留車次 (1/4)")
     time_bins = pd.date_range("00:00", "23:59", freq="h").time
     week_days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     columns = [cat + "_" + day for day, cat in product(week_days, categories)]
@@ -91,7 +91,7 @@ def generate_average_max_vehicles(df, categories, start_date, end_date):
                 size_table[(i, time_bin, cat)] = []
     
     current_date = start_date
-    with tqdm(total = (end_date - start_date).days) as pbar:
+    with tqdm(total = (end_date - start_date).days+1) as pbar:
         while current_date <= end_date:
             for time_bin in time_bins:
                 for cat in categories:
@@ -112,7 +112,8 @@ def generate_average_max_vehicles(df, categories, start_date, end_date):
     weekly_avg_max_vehicles.columns = [col[:-4] if isinstance(col, str) else col for col in weekly_avg_max_vehicles.columns]
     return weekly_avg_max_vehicles
 def generate_max_vehicles_in_period(df, time_periods, categories, start_date, end_date):
-    print("開始分析某時段內同時停留在校園內的最高車輛數 (2/4)")
+    print()
+    print("開始分析時段平均最高停留車次 (2/4)")
     time_periods_str = [start_time.strftime("%H:%M:%S") + "-" + end_time.strftime("%H:%M:%S") for (start_time, end_time) in time_periods]
     week_days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     columns = [cat + "_" + day for day, cat in product(week_days, categories)]
@@ -125,7 +126,7 @@ def generate_max_vehicles_in_period(df, time_periods, categories, start_date, en
             for cat in categories:
                 size_table[(i, time_periods_str[j], cat)] = []
 
-    with tqdm(total = (end_date - start_date).days) as pbar:
+    with tqdm(total = (end_date - start_date).days+1) as pbar:
         while current_date <= end_date:
             for j in range(len(time_periods)):
                 for cat in categories:
@@ -154,7 +155,8 @@ def generate_max_vehicles_in_period(df, time_periods, categories, start_date, en
     return avg_max_vehicles_in_period
 
 def generate_vehicle_in_out_by_hour(df, categories, start_date, end_date):
-    print("開始分析在該小時內進出校園的車輛數 (3/4)")
+    print()
+    print("開始分析每小時平均進出車流量 (3/4)")
     time_bins = pd.date_range("00:00", "23:59", freq="h").time
     INOUT = ["In", "Out"]
     week_days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -169,7 +171,7 @@ def generate_vehicle_in_out_by_hour(df, categories, start_date, end_date):
                 for cat in categories:
                     size_table[(i, typ, time_bin, cat)] = []
     
-    with tqdm(total = (end_date - start_date).days) as pbar:
+    with tqdm(total = (end_date - start_date).days+1) as pbar:
         while current_date <= end_date:
             for time_bin in time_bins:
                 for cat in categories:
@@ -195,7 +197,8 @@ def generate_vehicle_in_out_by_hour(df, categories, start_date, end_date):
     return vehicle_in_out_by_hour
 
 def generate_longest_continuous_stay(df, categories):
-    print("開始分析最高連續停留時長統計 (4/4)")
+    print()
+    print("開始分析最高連續停留時長 (4/4)")
     time_bin = [744, 696, 648, 600, 552, 504, 456, 408, 360, 312, 264, 216, 168, 144, 120, 96, 72, 48, 24, 22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 1, 0.5, 0]
     time_bin_str = ['744 (31days)', '696 (29days)', '648 (27days)', '600 (25days)', '552 (23days)', '504 (21days)', '456 (19days)', '408 (17days)', '360 (15days)', '312 (13days)', '264 (11days)', '216 (9 days)', '168 (7days)', '144 (6days)', '120 (5days)', '96 (4days)', '72 (3days)', '48 (2days)', '24 (1day)', '22', '20', '18', '16', '14', '12', '10', '8', '6', '4', '2', '1', '0.5', '0']
     longest_stays = pd.DataFrame(columns = categories, index = time_bin_str)
@@ -270,29 +273,31 @@ if __name__ == "__main__":
     while True:
         start_date = input("請輸入欲查詢開始日期 (ex. 2024-10-1): ").strip()
         if not is_valid_datetime(start_date, "%Y-%m-%d"):
-            print("格式錯誤，請再輸入一次。")
+            print("【Error】格式錯誤，請再輸入一次。")
             # print("錯誤輸入: " + start_date)
         else:
             break
 
     start_date = pd.to_datetime(start_date)
+    print()
 
     end_date = ""
 
     while True:
         end_date = input("請輸入欲查詢結束日期 (ex. 2024-10-30): ").strip()
         if not is_valid_datetime(end_date, "%Y-%m-%d"):
-            print("格式錯誤，請再輸入一次。")
+            print("【Error】格式錯誤，請再輸入一次。")
             # print("錯誤輸入: " + end_date)
         else:
             break
             
     end_date = pd.to_datetime(end_date)
+    print()
 
     time_periods = []
     while True:
         ok = True
-        time_periods_input = list(input("請輸入要查詢的時間點，可多個，請用空白隔開\n若不須查詢特定時間，可以直接按enter跳過 (ex. 8:00-17:00 8:00-13:00): ").split(' '))
+        time_periods_input = list(input("請輸入要查詢的時間點，可多個，請用空白隔開 (ex. 8:00-17:00 8:00-13:00)\n若不須查詢特定時間，可以直接按enter跳過：").split(' '))
         time_periods_input = [period.strip() for period in time_periods_input if period.strip()]
 
         time_periods = []
@@ -300,18 +305,13 @@ if __name__ == "__main__":
             try:
                 start_oclock, end_oclock = time_period_input.split("-")
             except (ValueError):
-                print("格式錯誤，請再輸入一次。")
+                print("【Error】格式錯誤，請再輸入一次。")
                 # print("錯誤輸入: " + time_period_input)
                 ok = False
                 break
-            if not is_valid_datetime(start_oclock, "%H:%M"):
-                print("格式錯誤，請再輸入一次。")
+            if (not is_valid_datetime(start_oclock, "%H:%M")) or (not is_valid_datetime(end_oclock, "%H:%M")):
+                print("【Error】格式錯誤，請再輸入一次。")
                 # print("錯誤輸入: " + start_oclock)
-                ok = False
-
-            if not is_valid_datetime(end_oclock, "%H:%M"):
-                print("格式錯誤，請再輸入一次。")
-                # print("錯誤輸入: " + end_oclock)
                 ok = False
             
             time_periods.append((start_oclock, end_oclock))
@@ -325,7 +325,6 @@ if __name__ == "__main__":
         end_oclock = datetime.datetime.strptime(time_periods[i][1], "%H:%M").time()
         time_periods[i] = [start_oclock, end_oclock]
 
-    print("開始分析")
     
     for arena in ['光復', '博愛']:
         categories = ['學生長時汽車', '學生計次汽車', '教職員汽車', '教職員計次', '臨停車', '長時廠商汽車', '在職專班汽車', '臨時貴賓', '退休及校友臨停', '退休及校友汽車識別證', '互惠車輛', '身障優惠', '特殊入校車輛']
@@ -333,13 +332,15 @@ if __name__ == "__main__":
         pattern = re.compile(r".*" + arena + ".*\.xlsx$")
         files_path = [f for f in os.listdir(folder_path) if pattern.match(f)]
         # print(files_path)
-        print("讀取" + arena + "校區停車資料中")
+        print()
+        print("讀取【" + arena + "】校區停車資料中...")
         df = pd.DataFrame()
-        for file_path in files_path:
+        for file_path in tqdm(files_path):
             df_file = analyze_parking_data(folder_path + "/" + file_path, categories, start_date, end_date)
             df = pd.concat([df, pd.DataFrame(df_file)])
+        print()
         # print(df)
-        print("分析" + arena + "校區停車資料中")
+        print("分析【" + arena + "】校區停車資料中...\n")
         avg_max_vehicles = generate_average_max_vehicles(df, categories, start_date, end_date)
         max_vehicles_in_period = generate_max_vehicles_in_period(df, time_periods, categories, start_date, end_date)
         vehicle_in_out_by_hour = generate_vehicle_in_out_by_hour(df, categories, start_date, end_date)
