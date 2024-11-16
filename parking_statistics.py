@@ -180,8 +180,8 @@ def generate_vehicle_in_out_by_hour(df, categories, start_date, end_date):
                         end_time = current_date.replace(hour = time_bin.hour, minute = 59, second = 59)
                         if typ == "In":
                             vehicles_in_time_bin = df[(df['enter_ts'] <= end_time) & (df['enter_ts'] >= start_time) & (df['票種'] == cat)]
-                        elif type == "Out":
-                            vehicles_in_time_bin = df[not pd.isnull(df['leave_ts']) & (df['leave_ts'] <= end_time) & (pd.isnull(df['leave_ts']) | (df['leave_ts'] >= start_time)) & (df['票種'] == cat)]
+                        elif typ == "Out":
+                            vehicles_in_time_bin = df[(~pd.isnull(df['leave_ts'])) & (df['leave_ts'] <= end_time) & (df['leave_ts'] >= start_time) & (df['票種'] == cat)]
                         size_table[(current_date.weekday(), typ, time_bin, cat)].append(len(vehicles_in_time_bin))
             current_date += datetime.timedelta(days = 1)
             pbar.update(1)
